@@ -1,0 +1,98 @@
+import org.gradle.internal.os.OperatingSystem
+
+plugins {
+  id "maven-publish"
+}
+
+// Project Version
+ext.pub_version = "0.95-1"
+
+static def get_platform() {
+  def platform
+  def os_name = System.getProperty("os.name")
+  def os_arch = System.getProperty("os.arch")
+
+  if (os_arch == 'amd64') {
+    os_arch = 'x86_64'
+  } else if (os_arch == 'i386') {
+    os_arch = 'x86'
+  }
+
+  if (OperatingSystem.current().isWindows()) {
+    platform = "windows-${os_arch}"
+  } else if (OperatingSystem.current().isLinux()) {
+    platform = "linux-${os_arch}"
+  } else if (OperatingSystem.current().isMacOsX()) {
+    platform = "osx-${os_arch}"
+  } else {
+    platform = "${os_name}-${os_arch}"
+  }
+  return platform
+}
+
+static def get_platform_path(platform) {
+  if (platform == "linux-athena") {
+    return "linux/athena"
+  } else if (platform == "linux-raspbian") {
+    return "linux/raspbian"
+  } else if (platform == "linux-aarch64bionic") {
+    return "linux/aarch64bionic"
+  } else if (platform == "linux-x86") {
+    return "linux/x86"
+  } else if (platform == "linux-x86_64") {
+    return "linux/x86-64"
+  } else if (platform == "osx-x86") {
+    return "osx/x86"
+  } else if (platform == "osx-x86_64") {
+    return "osx/x86-64"
+  } else if (platform == "windows-x86") {
+    return "windows/x86"
+  } else if (platform == "windows-x86_64") {
+    return "windows/x86-64"
+  } else {
+    return ""
+  }
+}
+
+ext.platform = get_platform()
+ext.platform_path = get_platform_path(ext.platform)
+ext.platform_classifier = ext.platform.replaceFirst('-', '').replace('_', '-')
+
+// Get the number of processors available to build.
+ext.processors = Runtime.runtime.availableProcessors()
+
+ext.openssl_dir = file("openssl")
+ext.openssl_install = file("install-openssl")
+
+ext.libssh_dir = file("libssh-mirror")
+ext.libssh_build = file("build-libssh")
+
+apply from: "openssl.gradle"
+apply from: "libssh.gradle"
+
+// Outputs for publishing
+def outputs_dir = file("$buildDir/allOutputs")
+task copyAllOutputs(type: Copy) {
+  destinationDir outputs_dir
+}
+
+ext.addTaskToCopyAllOutputs = { task ->
+  copyAllOutputs.dependsOn task
+  copyAllOutputs.inputs.file task.archivePath
+  copyAllOutputs.from task.archivePath
+}
+
+task clean {
+  doLast {
+    rootDir.eachDir {dir ->
+      if (dir.name.startsWith("build") || dir.name.startsWith("install"))
+        delete dir
+    }
+  }
+}
+
+task build {
+  dependsOn copyAllOutputs
+}
+
+apply from: "publish.gradle"

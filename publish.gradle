@@ -1,0 +1,154 @@
+// Define directories and files used for outputs.
+def outputs_dir = file("$buildDir/outputs")
+def libssh_license_file = file("libssh-mirror/COPYING")
+def openssl_license_file = file("openssl/LICENSE.txt")
+
+// Define names for publishing.
+def base_artifact_id = "libssh"
+def artifact_group_id = "edu.wpi.first.thirdparty.frc2022"
+
+// Define names for archives.
+def zip_base_name = "_GROUP_edu_wpi_first_thirdparty_frc2022_ID_libssh_CLS"
+
+// Generate version number.
+def version_file = file("$outputs_dir/version.txt")
+task outputVersions() {
+  outputs.files(version_file)
+
+  doFirst {
+    buildDir.mkdir()
+    outputs_dir.mkdir()
+  }
+
+  doLast {
+    version_file.write project.pub_version
+  }
+}
+
+build.dependsOn outputVersions
+copyAllOutputs.dependsOn outputVersions
+copyAllOutputs.inputs.file version_file
+copyAllOutputs.from version_file
+
+// Create archive of headers.
+task cppHeadersZip(type: Zip) {
+  dependsOn "libSSHDebug"
+
+  destinationDir = outputs_dir
+  baseName = zip_base_name
+  classifier = "headers"
+
+  // Copy license files.
+  from(libssh_license_file) {
+    into "/"
+    rename { _ -> "LIBSSH-LICENSE" }
+  }
+  from(openssl_license_file) {
+    into "/"
+    rename { _ -> "OPENSSL_LICENSE" }
+  }
+
+  // Copy headers.
+  from("${project.libssh_dir}/include") {
+    into "/"
+    include "**/*.h", "**/*.hpp"
+  }
+
+  from("${project.libssh_build}-debug/include") {
+    into "/"
+    include "**/*.h", "**/*.hpp"
+  }
+
+  includeEmptyDirs = false
+
+  // Add task to copy all outputs.
+  project.addTaskToCopyAllOutputs(it)
+}
+
+// Create archive of sources.
+
+task cppSourcesZip(type: Zip) {
+  dependsOn "libSSHDebug"
+
+  destinationDir = outputs_dir
+  baseName = zip_base_name
+  classifier = "sources"
+
+  // Copy license files.
+  from(libssh_license_file) {
+    into "/"
+    rename { _ -> "LIBSSH-LICENSE" }
+  }
+  from(openssl_license_file) {
+    into "/"
+    rename { _ -> "OPENSSL_LICENSE" }
+  }
+
+  // Copy headers.
+  from("${project.libssh_dir}/src") {
+    into "/"
+    include "**/*.c"
+  }
+
+  includeEmptyDirs = false
+
+  // Add task to copy all outputs.
+  project.addTaskToCopyAllOutputs(it)
+}
+
+// Create archive of libraries.
+def types = ["Debug", "Release"]
+types.each { type ->
+  project.tasks.create("cpp${type}LibrariesZip", Zip) {
+    dependsOn "libSSH$type"
+
+    destinationDir = outputs_dir
+    baseName = zip_base_name
+    classifier = project.platform_classifier + "static" + type.toLowerCase().replace("release", "")
+
+    // Copy license files.
+    from(libssh_license_file) {
+      into "/"
+      rename { _ -> "LIBSSH-LICENSE" }
+    }
+    from(openssl_license_file) {
+      into "/"
+      rename { _ -> "OPENSSL_LICENSE" }
+    }
+
+    // Copy libraries.
+    def lib_dir = file("${project.libssh_build}-${type.toLowerCase()}/lib")
+
+    if (project.platform.contains("windows")) {
+      // On Windows, the staging dir is one layer deeper.
+      lib_dir = file("$lib_dir/$type")
+      from("$lib_dir/ssh${project.pub_version}.lib") { into "${project.platform_path}/static" }
+      from("$lib_dir") {
+        into "${project.platform_path}/static"
+        include "*.pdb"
+      }
+    } else {
+      from("$lib_dir/libssh${project.pub_version}.a") { into "${project.platform_path}/static" }
+    }
+
+    // Add task to copy all outputs.
+    project.addTaskToCopyAllOutputs(it)
+  }
+}
+
+model {
+  publishing {
+    publications {
+      libssh(MavenPublication) {
+        artifact cppHeadersZip
+        artifact cppSourcesZip
+        artifact cppDebugLibrariesZip
+        artifact cppReleaseLibrariesZip
+
+        artifactId = base_artifact_id
+        groupId = artifact_group_id
+        version = project.pub_version
+      }
+    }
+  }
+}

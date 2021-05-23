@@ -1,0 +1,49 @@
+// Runs the configure step.
+project.tasks.create("configureOpenSSL", Exec) {
+  // OpenSSL is configured with Perl. We want to build static libraries and specify
+  // a custom installation location.
+  executable "perl"
+  args "Configure", "no-shared", "--prefix=${project.openssl_install}"
+  workingDir project.openssl_dir
+
+  // Add the arch specifier for Windows.
+  if (project.platform.contains("windows"))
+    args project.platform == "windows-x86" ? "VC-WIN32" : "VC-WIN64A"
+}
+
+def make = project.platform.contains("windows") ? "nmake" : "make"
+
+// Runs the build step.
+project.tasks.create("buildOpenSSL", Exec) {
+  // Make sure that we are configured.
+  dependsOn "configureOpenSSL"
+
+  // OpenSSL is built with make on UNIX and nmake on Windows.
+  executable make
+  workingDir project.openssl_dir
+
+  // UNIX supports building with multiple workers.
+  if (!project.platform.contains("windows"))
+    args "-j${project.processors}"
+}
+
+// Runs the install step.
+project.tasks.create("installOpenSSL", Exec) {
+  // Make sure that we have built.
+  dependsOn "buildOpenSSL"
+
+  // OpenSSL is installed with make on UNIX and nmake on Windows.
+  executable make
+  args "install_sw"
+  workingDir project.openssl_dir
+
+  // UNIX supports installing with multiple workers.
+  if (!project.platform.contains("windows"))
+    args "-j${project.processors}"
+}
+
+// Create a "mega-task" that builds everything.
+project.tasks.create("openSSL") {
+  dependsOn "installOpenSSL"
+  outputs.dir(project.openssl_install)
+}

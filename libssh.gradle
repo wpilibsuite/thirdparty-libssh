@@ -1,0 +1,106 @@
+// Runs the configure step.
+def types = ["Debug", "Release"]
+types.each { type ->
+  project.tasks.create("configureLibSSH$type", Exec) {
+    // Make sure that OpenSSL is built and installed.
+    dependsOn "openSSL"
+
+    // Create an alias to the build directory.
+    def build_dir = file("$libssh_build-${type.toLowerCase()}")
+
+    // Create the build directory if it doesn't exist.
+    if (!build_dir.exists())
+      build_dir.mkdir()
+
+    // LibSSH is configured with CMake. We want to build static libraries. Also set
+    // the archive to be stored in build/lib instead of build/src (the default).
+    executable "cmake"
+    args "$libssh_dir", "-DBUILD_SHARED_LIBS=OFF", "-DWITH_ZLIB=OFF", "-DWITH_EXAMPLES=OFF",
+        "-DCMAKE_ARCHIVE_OUTPUT_DIRECTORY=${build_dir}/lib", "-DCMAKE_BUILD_TYPE=$type"
+    workingDir build_dir
+    environment "OPENSSL_ROOT_DIR": "${project.openssl_install}"
+
+    // Add the arch specifier for Windows.
+    if (project.platform.contains("windows")) {
+      args "-A"
+      args project.platform == "windows-x86" ? "Win32" : "x64"
+    }
+  }
+}
+
+// Runs the build step.
+types.each { type ->
+  project.tasks.create("buildLibSSH$type", Exec) {
+    // Make sure that we are configured.
+    dependsOn "configureLibSSH$type"
+
+    // Create an alias to the build directory.
+    def build_dir = file("$libssh_build-${type.toLowerCase()}")
+
+    // Use CMake to invoke the low-level build system.
+    executable "cmake"
+    args "--build", ".", "--parallel", "${project.processors}"
+    workingDir build_dir
+
+    // Specify arch and build type on Windows.
+    if (project.platform.contains("windows")) {
+      args "--", "/p:Configuration=$type", "/v:m",
+          project.platform == "windows-x86" ? "/p:Platform=win32" : "/p:Platform=x64"
+    }
+  }
+}
+
+// Runs the archiver step.
+types.each { type ->
+  project.tasks.create("create${type}Archive", Exec) {
+    // Make sure that we have built.
+    dependsOn "buildLibSSH$type"
+
+    // Create an alias to the libraries directories.
+    def ssl_libs = file("${project.openssl_install}/lib")
+    def ssh_libs = file("${project.libssh_build}-${type.toLowerCase()}/lib")
+
+    if (project.platform.contains("windows")) {
+      // LibSSH libraries are one layer deeper on windows.
+      ssh_libs = file("$ssh_libs/$type")
+
+      // Use "lib" to merge libraries.
+      executable "lib"
+      args "/OUT:ssh${project.pub_version}.lib"
+      workingDir ssh_libs
+
+      // Add libraries to merge.
+      args "$ssl_libs/libcrypto.lib"
+      args "$ssh_libs/ssh.lib"
+    } else if (project.platform.contains("osx")) {
+      // Use libtool to merge libraries.
+      executable "libtool"
+      args "-static", "-o", "libssh${project.pub_version}.a"
+      workingDir ssh_libs
+
+      // Add libraries to merge.
+      args "$ssl_libs/libcrypto.a"
+      args "$ssh_libs/libssh.a"
+    } else {
+      // Use ar to merge libraries.
+      executable "ar"
+      args "-M"
+      workingDir ssh_libs
+
+      // Add libraries to merge.
+      def str = "create libssh${project.pub_version}.a\n"
+      str += "addlib $ssl_libs/libcrypto.a\n"
+      str += "addlib $ssh_libs/libssh.a\n"
+      str += "save\nend\n"
+
+      standardInput = new ByteArrayInputStream(str.getBytes())
+    }
+  }
+}
+
+// Create a "mega-task" that builds everything.
+types.each { type ->
+  project.tasks.create("libSSH$type") {
+    dependsOn "create${type}Archive"
+  }
+}
