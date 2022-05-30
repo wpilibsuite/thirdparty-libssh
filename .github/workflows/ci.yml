@@ -29,7 +29,7 @@ jobs:
             architecture: x64
             vc: vcvars64.bat
     name: "Build - ${{ matrix.artifact-name }}"
-    runs-on: windows-latest
+    runs-on: windows-2019
     steps:
       - uses: actions/checkout@v2
         with:
