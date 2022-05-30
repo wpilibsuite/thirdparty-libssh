@@ -6,7 +6,7 @@ jobs:
   build-linux:
     name: "Build - Linux"
     runs-on: ubuntu-latest
-    container: wpilib/ubuntu-base:18.04
+    container: wpilib/ubuntu-base:20.04
     steps:
       - uses: actions/checkout@v2
         with:
@@ -28,9 +28,6 @@ jobs:
           - artifact-name: Win64
             architecture: x64
             vc: vcvars64.bat
-          - artifact-name: Win32
-            architecture: x86
-            vc: vcvars32.bat
     name: "Build - ${{ matrix.artifact-name }}"
     runs-on: windows-latest
     steps:
