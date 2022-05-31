@@ -5,10 +5,10 @@ def openssl_license_file = file("openssl/LICENSE.txt")
 
 // Define names for publishing.
 def base_artifact_id = "libssh"
-def artifact_group_id = "edu.wpi.first.thirdparty.frc2022"
+def artifact_group_id = "edu.wpi.first.thirdparty.frc2023"
 
 // Define names for archives.
-def zip_base_name = "_GROUP_edu_wpi_first_thirdparty_frc2022_ID_libssh_CLS"
+def zip_base_name = "_GROUP_edu_wpi_first_thirdparty_frc2023_ID_libssh_CLS"
 
 // Generate version number.
 def version_file = file("$outputs_dir/version.txt")
