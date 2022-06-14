@@ -117,7 +117,7 @@ types.each { type ->
     }
 
     // Copy libraries.
-    def lib_dir = file("${project.libssh_build}-${type.toLowerCase()}/lib")
+    def lib_dir = file("${project.libssh_build}/${type.toLowerCase()}/lib")
 
     if (project.platform.contains("windows")) {
       // On Windows, the staging dir is one layer deeper.
