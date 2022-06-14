@@ -1,3 +1,11 @@
+task prepareLibSshirectories {
+    mustRunAfter clean
+    doLast {
+        mkdir project.file("$project.libssh_build/release")
+        mkdir project.file("$project.libssh_build/debug")
+    }
+}
+
 // Runs the configure step.
 def types = ["Debug", "Release"]
 types.each { type ->
@@ -6,16 +14,22 @@ types.each { type ->
     dependsOn "openSSL"
 
     // Create an alias to the build directory.
-    def build_dir = file("$libssh_build-${type.toLowerCase()}")
-
-    // Create the build directory if it doesn't exist.
-    if (!build_dir.exists())
-      build_dir.mkdir()
+    def build_dir = file("$libssh_build/${type.toLowerCase()}")
 
     // LibSSH is configured with CMake. We want to build static libraries. Also set
     // the archive to be stored in build/lib instead of build/src (the default).
     executable "cmake"
-    args "$libssh_dir", "-DBUILD_SHARED_LIBS=OFF", "-DWITH_ZLIB=OFF", "-DWITH_EXAMPLES=OFF",
+    args "$libssh_dir"
+
+    if (project.platform == "osx-arm64") {
+      args "-DCMAKE_OSX_ARCHITECTURES=arm64", "-DCMAKE_OSX_DEPLOYMENT_TARGET=\"11.0\""
+      environment "ARCHFLAGS", "-arch arm64"
+    } else if (project.platform == "osx-x86_64") {
+      args "-DCMAKE_OSX_ARCHITECTURES=x86_64", "-DCMAKE_OSX_DEPLOYMENT_TARGET=\"10.15\""
+    }
+
+
+    args "-DBUILD_SHARED_LIBS=OFF", "-DWITH_ZLIB=OFF", "-DWITH_EXAMPLES=OFF",
         "-DCMAKE_ARCHIVE_OUTPUT_DIRECTORY=${build_dir}/lib", "-DCMAKE_BUILD_TYPE=$type"
     workingDir build_dir
     environment "OPENSSL_ROOT_DIR": "${project.openssl_install}"
@@ -25,6 +39,8 @@ types.each { type ->
       args "-A"
       args project.platform == "windows-x86" ? "Win32" : "x64"
     }
+
+    dependsOn prepareLibSshirectories
   }
 }
 
@@ -35,7 +51,7 @@ types.each { type ->
     dependsOn "configureLibSSH$type"
 
     // Create an alias to the build directory.
-    def build_dir = file("$libssh_build-${type.toLowerCase()}")
+    def build_dir = file("$libssh_build/${type.toLowerCase()}")
 
     // Use CMake to invoke the low-level build system.
     executable "cmake"
@@ -58,7 +74,7 @@ types.each { type ->
 
     // Create an alias to the libraries directories.
     def ssl_libs = file("${project.openssl_install}/lib")
-    def ssh_libs = file("${project.libssh_build}-${type.toLowerCase()}/lib")
+    def ssh_libs = file("${project.libssh_build}/${type.toLowerCase()}/lib")
 
     if (project.platform.contains("windows")) {
       // LibSSH libraries are one layer deeper on windows.

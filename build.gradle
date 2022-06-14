@@ -16,6 +16,8 @@ static def get_platform() {
     os_arch = 'x86_64'
   } else if (os_arch == 'i386') {
     os_arch = 'x86'
+  } else if (os_arch == 'aarch64' || os_arch == 'arm64') {
+    os_arch = 'arm64'
   }
 
   if (OperatingSystem.current().isWindows()) {
@@ -48,13 +50,22 @@ static def get_platform_path(platform) {
   } else if (platform == "windows-x86") {
     return "windows/x86"
   } else if (platform == "windows-x86_64") {
-    return "windows/x86-64"
+    return "osx/x86-64"
+  } else if (platform == "osx-arm64") {
+    return "osx/arm64"
   } else {
     return ""
   }
 }
 
 ext.platform = get_platform()
+if (project.hasProperty('forcealternatemacbuild')) {
+  if (ext.platform == "osx-arm64") {
+    ext.platform = "osx-x86_64"
+  } else if (ext.platform == "osx-x86_64") {
+    ext.platform = "osx-arm64"
+  }
+}
 ext.platform_path = get_platform_path(ext.platform)
 ext.platform_classifier = ext.platform.replaceFirst('-', '').replace('_', '-')
 
@@ -62,10 +73,20 @@ ext.platform_classifier = ext.platform.replaceFirst('-', '').replace('_', '-')
 ext.processors = Runtime.runtime.availableProcessors()
 
 ext.openssl_dir = file("openssl")
-ext.openssl_install = file("install-openssl")
+ext.openssl_build_dir = file("build/$platform_path/openssl")
+ext.openssl_install = file("build/$platform_path/install-openssl")
 
 ext.libssh_dir = file("libssh-mirror")
-ext.libssh_build = file("build-libssh")
+ext.libssh_build = file("build/$platform_path/libssh")
+
+task clean {
+  doLast {
+    rootDir.eachDir {dir ->
+      if (dir.name.startsWith("build") || dir.name.startsWith("install"))
+        delete dir
+    }
+  }
+}
 
 apply from: "openssl.gradle"
 apply from: "libssh.gradle"
@@ -82,17 +103,12 @@ ext.addTaskToCopyAllOutputs = { task ->
   copyAllOutputs.from task.archivePath
 }
 
-task clean {
-  doLast {
-    rootDir.eachDir {dir ->
-      if (dir.name.startsWith("build") || dir.name.startsWith("install"))
-        delete dir
-    }
-  }
-}
-
 task build {
   dependsOn copyAllOutputs
 }
 
 apply from: "publish.gradle"
+
+wrapper {
+    gradleVersion = '7.5-rc-2'
+}
