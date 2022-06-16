@@ -26,8 +26,8 @@ types.each { type ->
       environment "ARCHFLAGS", "-arch arm64"
     } else if (project.platform == "osx-x86_64") {
       args "-DCMAKE_OSX_ARCHITECTURES=x86_64", "-DCMAKE_OSX_DEPLOYMENT_TARGET=\"10.15\""
+      environment "ARCHFLAGS", "-arch x86_64"
     }
-
 
     args "-DBUILD_SHARED_LIBS=OFF", "-DWITH_ZLIB=OFF", "-DWITH_EXAMPLES=OFF",
         "-DCMAKE_ARCHIVE_OUTPUT_DIRECTORY=${build_dir}/lib", "-DCMAKE_BUILD_TYPE=$type"
