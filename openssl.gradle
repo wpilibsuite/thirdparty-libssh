@@ -1,14 +1,32 @@
+task prepareOpenSSLDirectories {
+    mustRunAfter clean
+    doLast {
+        mkdir project.openssl_build_dir
+        mkdir project.openssl_install
+    }
+}
+
 // Runs the configure step.
 project.tasks.create("configureOpenSSL", Exec) {
   // OpenSSL is configured with Perl. We want to build static libraries and specify
   // a custom installation location.
   executable "perl"
-  args "Configure", "no-shared", "--prefix=${project.openssl_install}"
-  workingDir project.openssl_dir
+  def configureLocation = project.file("$project.openssl_dir/Configure")
+  args configureLocation, "no-shared", "--prefix=${project.openssl_install}"
+  workingDir project.openssl_build_dir
 
   // Add the arch specifier for Windows.
-  if (project.platform.contains("windows"))
+  if (project.platform.contains("windows")) {
     args project.platform == "windows-x86" ? "VC-WIN32" : "VC-WIN64A"
+  } else if (project.platform == "osx-arm64") {
+    args "darwin64-arm64-cc"
+    environment "ARCHFLAGS", "-arch arm64"
+  } else if (project.platform == "osx-x86_64") {
+    args "darwin64-x86_64-cc"
+    environment "ARCHFLAGS", "-arch x86_64"
+  }
+
+  dependsOn prepareOpenSSLDirectories
 }
 
 def make = project.platform.contains("windows") ? "nmake" : "make"
@@ -20,7 +38,7 @@ project.tasks.create("buildOpenSSL", Exec) {
 
   // OpenSSL is built with make on UNIX and nmake on Windows.
   executable make
-  workingDir project.openssl_dir
+  workingDir project.openssl_build_dir
 
   // UNIX supports building with multiple workers.
   if (!project.platform.contains("windows"))
@@ -35,7 +53,7 @@ project.tasks.create("installOpenSSL", Exec) {
   // OpenSSL is installed with make on UNIX and nmake on Windows.
   executable make
   args "install_sw"
-  workingDir project.openssl_dir
+  workingDir project.openssl_build_dir
 
   // UNIX supports installing with multiple workers.
   if (!project.platform.contains("windows"))

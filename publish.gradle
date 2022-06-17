@@ -34,8 +34,8 @@ copyAllOutputs.from version_file
 task cppHeadersZip(type: Zip) {
   dependsOn "libSSHDebug"
 
-  destinationDir = outputs_dir
-  baseName = zip_base_name
+  destinationDirectory = outputs_dir
+  archiveBaseName = zip_base_name
   classifier = "headers"
 
   // Copy license files.
@@ -70,8 +70,8 @@ task cppHeadersZip(type: Zip) {
 task cppSourcesZip(type: Zip) {
   dependsOn "libSSHDebug"
 
-  destinationDir = outputs_dir
-  baseName = zip_base_name
+  destinationDirectory = outputs_dir
+  archiveBaseName = zip_base_name
   classifier = "sources"
 
   // Copy license files.
@@ -102,8 +102,8 @@ types.each { type ->
   project.tasks.create("cpp${type}LibrariesZip", Zip) {
     dependsOn "libSSH$type"
 
-    destinationDir = outputs_dir
-    baseName = zip_base_name
+    destinationDirectory = outputs_dir
+    archiveBaseName = zip_base_name
     classifier = project.platform_classifier + "static" + type.toLowerCase().replace("release", "")
 
     // Copy license files.
@@ -117,7 +117,7 @@ types.each { type ->
     }
 
     // Copy libraries.
-    def lib_dir = file("${project.libssh_build}-${type.toLowerCase()}/lib")
+    def lib_dir = file("${project.libssh_build}/${type.toLowerCase()}/lib")
 
     if (project.platform.contains("windows")) {
       // On Windows, the staging dir is one layer deeper.
