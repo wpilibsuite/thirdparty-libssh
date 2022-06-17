@@ -54,7 +54,7 @@ task cppHeadersZip(type: Zip) {
     include "**/*.h", "**/*.hpp"
   }
 
-  from("${project.libssh_build}-debug/include") {
+  from("${project.libssh_build}/debug/include") {
     into "/"
     include "**/*.h", "**/*.hpp"
   }
