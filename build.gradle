@@ -5,7 +5,7 @@ plugins {
 }
 
 // Project Version
-ext.pub_version = "0.95-1"
+ext.pub_version = "0.95-2"
 
 static def get_platform() {
   def platform
@@ -35,10 +35,10 @@ static def get_platform() {
 static def get_platform_path(platform) {
   if (platform == "linux-athena") {
     return "linux/athena"
-  } else if (platform == "linux-raspbian") {
-    return "linux/raspbian"
-  } else if (platform == "linux-aarch64bionic") {
-    return "linux/aarch64bionic"
+  } else if (platform == "linux-arm32") {
+    return "linux/arm32"
+  } else if (platform == "linux-arm64") {
+    return "linux/arm64"
   } else if (platform == "linux-x86") {
     return "linux/x86"
   } else if (platform == "linux-x86_64") {
