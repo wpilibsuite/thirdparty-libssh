@@ -54,7 +54,7 @@ jobs:
           name: Linux Arm64
           path: build/allOutputs
 
-  build-linux-arm64:
+  build-linux-athena:
     name: "Build - Linux Athena"
     runs-on: ubuntu-latest
     container: wpilib/roborio-cross-ubuntu:2023-22.04
