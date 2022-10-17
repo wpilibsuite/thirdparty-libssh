@@ -12,7 +12,7 @@ project.tasks.create("configureOpenSSL", Exec) {
   // a custom installation location.
   executable "perl"
   def configureLocation = project.file("$project.openssl_dir/Configure")
-  args configureLocation, "no-shared", "--prefix=${project.openssl_install}"
+  args configureLocation, "no-shared", "--prefix=${project.openssl_install}", "--libdir=lib"
   workingDir project.openssl_build_dir
 
   // Add the arch specifier for Windows.
