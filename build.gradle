@@ -66,6 +66,9 @@ if (project.hasProperty('forcealternatemacbuild')) {
     ext.platform = "osx-arm64"
   }
 }
+if (project.hasProperty('forcecrossbuild')) {
+  ext.platform = forcecrossbuild
+}
 ext.platform_path = get_platform_path(ext.platform)
 ext.platform_classifier = ext.platform.replaceFirst('-', '').replace('_', '-')
 

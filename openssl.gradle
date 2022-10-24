@@ -24,6 +24,22 @@ project.tasks.create("configureOpenSSL", Exec) {
   } else if (project.platform == "osx-x86_64") {
     args "darwin64-x86_64-cc"
     environment "ARCHFLAGS", "-arch x86_64"
+  } else {
+    args "--openssldir=/usr/local/ssl"
+    if (project.platform == "linux-arm32") {
+      args "linux-armv4"
+      args "-DL_ENDIAN"
+      args "-latomic"
+      args "--cross-compile-prefix=armv6-bullseye-linux-gnueabihf-"
+    } else if (project.platform == "linux-athena") {
+      args "linux-armv4"
+      args "-DL_ENDIAN"
+      args "-latomic"
+      args "--cross-compile-prefix=arm-frc2023-linux-gnueabi-"
+    } else if (project.platform == "linux-arm64") {
+      args "linux-aarch64"
+      args "--cross-compile-prefix=aarch64-bullseye-linux-gnu-"
+    }
   }
 
   dependsOn prepareOpenSSLDirectories

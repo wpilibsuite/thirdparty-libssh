@@ -20,6 +20,57 @@ jobs:
           name: Linux
           path: build/allOutputs
 
+  build-linux-arm32:
+    name: "Build - Linux Arm32"
+    runs-on: ubuntu-latest
+    container: wpilib/raspbian-cross-ubuntu:bullseye-22.04
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+
+      - name: Build
+        run: ./gradlew build -Pforcecrossbuild=linux-arm32
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: Linux Arm32
+          path: build/allOutputs
+
+  build-linux-arm64:
+    name: "Build - Linux Arm64"
+    runs-on: ubuntu-latest
+    container: wpilib/aarch64-cross-ubuntu:bullseye-22.04
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+
+      - name: Build
+        run: ./gradlew build -Pforcecrossbuild=linux-arm64
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: Linux Arm64
+          path: build/allOutputs
+
+  build-linux-athena:
+    name: "Build - Linux Athena"
+    runs-on: ubuntu-latest
+    container: wpilib/roborio-cross-ubuntu:2023-22.04
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+
+      - name: Build
+        run: ./gradlew build -Pforcecrossbuild=linux-athena
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: Linux Athena
+          path: build/allOutputs
+
   build-windows:
     strategy:
       fail-fast: false
