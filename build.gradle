@@ -5,7 +5,7 @@ plugins {
 }
 
 // Project Version
-ext.pub_version = "0.95-4"
+ext.pub_version = "0.95-5"
 
 static def get_platform() {
   def platform
