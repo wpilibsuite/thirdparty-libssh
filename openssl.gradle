@@ -30,7 +30,9 @@ project.tasks.create("configureOpenSSL", Exec) {
       args "linux-armv4"
       args "-DL_ENDIAN"
       args "-latomic"
-      args "--cross-compile-prefix=armv6-bullseye-linux-gnueabihf-"
+      if (project.hasProperty('forcecrossbuild')) {
+        args "--cross-compile-prefix=armv6-bullseye-linux-gnueabihf-"
+      }
     } else if (project.platform == "linux-athena") {
       args "linux-armv4"
       args "-DL_ENDIAN"
@@ -38,7 +40,9 @@ project.tasks.create("configureOpenSSL", Exec) {
       args "--cross-compile-prefix=arm-frc2023-linux-gnueabi-"
     } else if (project.platform == "linux-arm64") {
       args "linux-aarch64"
-      args "--cross-compile-prefix=aarch64-bullseye-linux-gnu-"
+      if (project.hasProperty('forcecrossbuild')) {
+        args "--cross-compile-prefix=aarch64-bullseye-linux-gnu-"
+      }
     }
   }
 
