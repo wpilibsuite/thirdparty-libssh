@@ -25,7 +25,7 @@ static def get_platform() {
   } else if (OperatingSystem.current().isLinux()) {
     platform = "linux-${os_arch}"
   } else if (OperatingSystem.current().isMacOsX()) {
-    platform = "osx-${os_arch}"
+    platform = "osx-universal"
   } else {
     platform = "${os_name}-${os_arch}"
   }
@@ -43,29 +43,18 @@ static def get_platform_path(platform) {
     return "linux/x86"
   } else if (platform == "linux-x86_64") {
     return "linux/x86-64"
-  } else if (platform == "osx-x86") {
-    return "osx/x86"
-  } else if (platform == "osx-x86_64") {
-    return "osx/x86-64"
+  } else if (platform == "osx-universal") {
+    return "osx/universal"
   } else if (platform == "windows-x86") {
     return "windows/x86"
   } else if (platform == "windows-x86_64") {
-    return "osx/x86-64"
-  } else if (platform == "osx-arm64") {
-    return "osx/arm64"
+    return "windows/x86-64"
   } else {
     return ""
   }
 }
 
 ext.platform = get_platform()
-if (project.hasProperty('forcealternatemacbuild')) {
-  if (ext.platform == "osx-arm64") {
-    ext.platform = "osx-x86_64"
-  } else if (ext.platform == "osx-x86_64") {
-    ext.platform = "osx-arm64"
-  }
-}
 if (project.hasProperty('forcecrossbuild')) {
   ext.platform = forcecrossbuild
 }
@@ -79,6 +68,12 @@ ext.openssl_dir = file("openssl")
 ext.openssl_build_dir = file("build/$platform_path/openssl")
 ext.openssl_install = file("build/$platform_path/install-openssl")
 
+ext.openssl_arm_build_dir = file("build/arm/openssl")
+ext.openssl_arm_install = file("build/arm/install-openssl")
+
+ext.openssl_intel_build_dir = file("build/intel/openssl")
+ext.openssl_intel_install = file("build/intel/install-openssl")
+
 ext.libssh_dir = file("libssh-mirror")
 ext.libssh_build = file("build/$platform_path/libssh")
 
@@ -91,7 +86,11 @@ task clean {
   }
 }
 
-apply from: "openssl.gradle"
+if (project.platform == "osx-universal") {
+  apply from: "opensslosx.gradle"
+} else {
+  apply from: "openssl.gradle"
+}
 apply from: "libssh.gradle"
 
 // Outputs for publishing

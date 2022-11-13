@@ -21,12 +21,9 @@ types.each { type ->
     executable "cmake"
     args "$libssh_dir"
 
-    if (project.platform == "osx-arm64") {
-      args "-DCMAKE_OSX_ARCHITECTURES=arm64", "-DCMAKE_OSX_DEPLOYMENT_TARGET=\"11.0\""
-      environment "ARCHFLAGS", "-arch arm64"
-    } else if (project.platform == "osx-x86_64") {
-      args "-DCMAKE_OSX_ARCHITECTURES=x86_64", "-DCMAKE_OSX_DEPLOYMENT_TARGET=\"10.15\""
-      environment "ARCHFLAGS", "-arch x86_64"
+    if (project.platform == "osx-universal") {
+      args "-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64", "-DCMAKE_OSX_DEPLOYMENT_TARGET=\"11.0\""
+      environment "ARCHFLAGS", "-arch arm64 -arch x86_64"
     } else if (project.platform == "linux-arm64") {
       if (project.hasProperty('forcecrossbuild')) {
         args "-DCMAKE_TOOLCHAIN_FILE=$rootDir/cmake/aarch64-bullseye-gnu.toolchain.cmake"

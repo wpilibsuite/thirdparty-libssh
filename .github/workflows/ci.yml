@@ -120,9 +120,6 @@ jobs:
       - name: Build
         run: ./gradlew build
 
-      - name: BuildArm
-        run: ./gradlew build -Pforcealternatemacbuild
-
       - uses: actions/upload-artifact@v2
         with:
           name: macOS
