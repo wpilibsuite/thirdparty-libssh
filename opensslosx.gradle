@@ -1,0 +1,157 @@
+task prepareOpenSSLDirectories {
+    mustRunAfter clean
+    doLast {
+        mkdir project.openssl_arm_build_dir
+        mkdir project.openssl_arm_install
+
+        mkdir project.openssl_intel_build_dir
+        mkdir project.openssl_intel_install
+    }
+}
+
+// Runs the configure step.
+project.tasks.create("configureOpenSSLIntel", Exec) {
+  // OpenSSL is configured with Perl. We want to build static libraries and specify
+  // a custom installation location.
+  executable "perl"
+  def configureLocation = project.file("$project.openssl_dir/Configure")
+  args configureLocation, "no-shared", "--prefix=${project.openssl_intel_install}", "--libdir=lib"
+  workingDir project.openssl_intel_build_dir
+
+  // Add the arch specifier for Windows.
+  args "darwin64-x86_64-cc"
+  environment "ARCHFLAGS", "-arch x86_64"
+
+  dependsOn prepareOpenSSLDirectories
+}
+
+project.tasks.create("configureOpenSSLArm", Exec) {
+  // OpenSSL is configured with Perl. We want to build static libraries and specify
+  // a custom installation location.
+  executable "perl"
+  def configureLocation = project.file("$project.openssl_dir/Configure")
+  args configureLocation, "no-shared", "--prefix=${project.openssl_arm_install}", "--libdir=lib"
+  workingDir project.openssl_arm_build_dir
+
+  // Add the arch specifier for Windows.
+  args "darwin64-arm64-cc"
+  environment "ARCHFLAGS", "-arch arm64"
+
+  dependsOn prepareOpenSSLDirectories
+}
+
+def make = "make"
+
+// Runs the build step.
+project.tasks.create("buildOpenSSLIntel", Exec) {
+  // Make sure that we are configured.
+  dependsOn "configureOpenSSLIntel"
+
+  // OpenSSL is built with make on UNIX and nmake on Windows.
+  executable make
+  workingDir project.openssl_intel_build_dir
+
+  args "-j${project.processors}"
+}
+
+// Runs the build step.
+project.tasks.create("buildOpenSSLArm", Exec) {
+  // Make sure that we are configured.
+  dependsOn "configureOpenSSLArm"
+
+  // OpenSSL is built with make on UNIX and nmake on Windows.
+  executable make
+  workingDir project.openssl_arm_build_dir
+
+  args "-j${project.processors}"
+}
+
+// Runs the install step.
+project.tasks.create("installOpenSSLIntel", Exec) {
+  // Make sure that we have built.
+  dependsOn "buildOpenSSLIntel"
+
+  // OpenSSL is installed with make on UNIX and nmake on Windows.
+  executable make
+  args "install_sw"
+  workingDir project.openssl_intel_build_dir
+
+  // UNIX supports installing with multiple workers.
+  args "-j${project.processors}"
+}
+
+project.tasks.create("installOpenSSLArm", Exec) {
+  // Make sure that we have built.
+  dependsOn "buildOpenSSLArm"
+
+  // OpenSSL is installed with make on UNIX and nmake on Windows.
+  executable make
+  args "install_sw"
+  workingDir project.openssl_arm_build_dir
+
+  args "-j${project.processors}"
+}
+
+project.tasks.create("copyOpenSSLHeaders", Copy) {
+  dependsOn "installOpenSSLArm"
+  dependsOn "installOpenSSLIntel"
+
+  from "$project.openssl_arm_install/include"
+  into "$project.openssl_install/include"
+}
+
+project.tasks.create("mergeCryptoBinaries", Exec) {
+  dependsOn "installOpenSSLArm"
+  dependsOn "installOpenSSLIntel"
+
+  def output = project.file("$project.openssl_install/lib/libcrypto.a")
+  outputs.file output
+
+  def arm_input = project.file("$project.openssl_arm_install/lib/libcrypto.a")
+  def intel_input = project.file("$project.openssl_intel_install/lib/libcrypto.a")
+
+  inputs.file arm_input
+  inputs.file intel_input
+
+  executable 'lipo'
+
+  args = [
+    '-create',
+    arm_input,
+    intel_input,
+    '-output',
+    output
+  ]
+}
+
+project.tasks.create("mergeSSLBinaries", Exec) {
+  dependsOn "installOpenSSLArm"
+  dependsOn "installOpenSSLIntel"
+
+  def output = project.file("$project.openssl_install/lib/libssl.a")
+  outputs.file output
+
+  def arm_input = project.file("$project.openssl_arm_install/lib/libssl.a")
+  def intel_input = project.file("$project.openssl_intel_install/lib/libssl.a")
+
+  inputs.file arm_input
+  inputs.file intel_input
+
+  executable 'lipo'
+
+  args = [
+    '-create',
+    arm_input,
+    intel_input,
+    '-output',
+    output
+  ]
+}
+
+// Create a "mega-task" that builds everything.
+project.tasks.create("openSSL") {
+  dependsOn "copyOpenSSLHeaders"
+  dependsOn "mergeSSLBinaries"
+  dependsOn "mergeCryptoBinaries"
+  outputs.dir(project.openssl_install)
+}
