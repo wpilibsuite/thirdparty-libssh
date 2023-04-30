@@ -29,6 +29,10 @@ static def get_platform() {
   } else {
     platform = "${os_name}-${os_arch}"
   }
+
+  if (project.hasProperty("platformOverride")) {
+    return platformOverride
+  }
   return platform
 }
 
