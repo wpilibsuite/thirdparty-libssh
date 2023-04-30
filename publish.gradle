@@ -36,7 +36,7 @@ task cppHeadersZip(type: Zip) {
 
   destinationDirectory = outputs_dir
   archiveBaseName = zip_base_name
-  classifier = "headers"
+  archiveClassifier = "headers"
 
   // Copy license files.
   from(libssh_license_file) {
@@ -72,7 +72,7 @@ task cppSourcesZip(type: Zip) {
 
   destinationDirectory = outputs_dir
   archiveBaseName = zip_base_name
-  classifier = "sources"
+  archiveClassifier = "sources"
 
   // Copy license files.
   from(libssh_license_file) {
@@ -104,7 +104,7 @@ types.each { type ->
 
     destinationDirectory = outputs_dir
     archiveBaseName = zip_base_name
-    classifier = project.platform_classifier + "static" + type.toLowerCase().replace("release", "")
+    archiveClassifier = project.platform_classifier + "static" + type.toLowerCase().replace("release", "")
 
     // Copy license files.
     from(libssh_license_file) {
