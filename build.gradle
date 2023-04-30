@@ -31,7 +31,7 @@ static def get_platform() {
   }
 
   if (project.hasProperty("platformOverride")) {
-    return platformOverride
+    return project.getProperty("platformOverride")
   }
   return platform
 }
