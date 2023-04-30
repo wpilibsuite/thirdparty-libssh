@@ -17,7 +17,13 @@ project.tasks.create("configureOpenSSL", Exec) {
 
   // Add the arch specifier for Windows.
   if (project.platform.contains("windows")) {
-    args project.platform == "windows-x86" ? "VC-WIN32" : "VC-WIN64A"
+    if (project.platform == "windows-x86") {
+      args "VC-WIN32"
+    } else if (project.platform == "windows-arm64") {
+      args "VC-WIN64-ARM"
+    } else {
+      args "VC-WIN64A"
+    }
   } else if (project.platform == "osx-arm64") {
     args "darwin64-arm64-cc"
     environment "ARCHFLAGS", "-arch arm64"

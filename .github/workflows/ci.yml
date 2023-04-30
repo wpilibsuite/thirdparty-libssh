@@ -82,6 +82,9 @@ jobs:
           - artifact-name: Win32
             architecture: x86
             vc: vcvars32.bat
+          - artifact-name: WinArm64
+            architecture: x64
+            vc: vcvarsamd64_arm64.bat
     name: "Build - ${{ matrix.artifact-name }}"
     runs-on: windows-2019
     steps:

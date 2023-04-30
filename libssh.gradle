@@ -50,10 +50,17 @@ types.each { type ->
     workingDir build_dir
     environment "OPENSSL_ROOT_DIR": "${project.openssl_install}"
 
+    def platformArg = "x64"
+    if (project.platform == "windows-x86") {
+      platformArg = "Win32"
+    } else if (project.platform == "windows-arm64") {
+      platformArg = "arm64"
+    }
+
     // Add the arch specifier for Windows.
     if (project.platform.contains("windows")) {
       args "-A"
-      args project.platform == "windows-x86" ? "Win32" : "x64"
+      args platformArg
     }
 
     dependsOn prepareLibSshirectories
@@ -74,10 +81,16 @@ types.each { type ->
     args "--build", ".", "--parallel", "${project.processors}"
     workingDir build_dir
 
+    def platformArg = "/p:Platform=x64"
+    if (project.platform == "windows-x86") {
+      platformArg = "/p:Platform=win32"
+    } else if (project.platform == "windows-arm64") {
+      platformArg = "/p:Platform=arm64"
+    }
+
     // Specify arch and build type on Windows.
     if (project.platform.contains("windows")) {
-      args "--", "/p:Configuration=$type", "/v:m",
-          project.platform == "windows-x86" ? "/p:Platform=win32" : "/p:Platform=x64"
+      args "--", "/p:Configuration=$type", "/v:m", platformArg
     }
   }
 }

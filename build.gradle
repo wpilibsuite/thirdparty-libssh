@@ -5,7 +5,7 @@ plugins {
 }
 
 // Project Version
-ext.pub_version = "0.95-6"
+ext.pub_version = "0.95-7"
 
 static def get_platform() {
   def platform
@@ -49,6 +49,8 @@ static def get_platform_path(platform) {
     return "windows/x86"
   } else if (platform == "windows-x86_64") {
     return "windows/x86-64"
+  } else if (platform == "windows-arm64") {
+    return "windows/arm64"
   } else {
     return ""
   }
@@ -101,8 +103,8 @@ task copyAllOutputs(type: Copy) {
 
 ext.addTaskToCopyAllOutputs = { task ->
   copyAllOutputs.dependsOn task
-  copyAllOutputs.inputs.file task.archivePath
-  copyAllOutputs.from task.archivePath
+  copyAllOutputs.inputs.file task.archiveFile
+  copyAllOutputs.from task.archiveFile
 }
 
 task build {
@@ -112,5 +114,5 @@ task build {
 apply from: "publish.gradle"
 
 wrapper {
-    gradleVersion = '7.5.1'
+    gradleVersion = '8.1'
 }
