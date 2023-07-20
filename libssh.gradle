@@ -45,8 +45,9 @@ types.each { type ->
       args "-DOPENSSL_INCLUDE_DIR=${project.openssl_install}/include"
     } else if (project.platform.contains("windows")) {
       args "-DOPENSSL_CRYPTO_LIBRARY=${project.openssl_install}/lib/libcrypto.lib"
-      args "-DOPENSSL_SSL_LIBRARY=${project.openssl_install}/lib/ssl.lib"
+      args "-DOPENSSL_SSL_LIBRARY=${project.openssl_install}/lib/libssl.lib"
       args "-DOPENSSL_INCLUDE_DIR=${project.openssl_install}/include"
+      args "-DOPENSSL_USE_STATIC_LIBS=TRUE"
     }
 
     args "-DBUILD_SHARED_LIBS=OFF", "-DWITH_ZLIB=OFF", "-DWITH_EXAMPLES=OFF",
