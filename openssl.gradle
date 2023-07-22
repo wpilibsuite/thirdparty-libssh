@@ -76,21 +76,9 @@ project.tasks.create("buildOpenSSL", Exec) {
   // Make sure that we are configured.
   dependsOn "configureOpenSSL"
 
-  // OpenSSL is built with make on UNIX and nmake on Windows.
+  // OpenSSL is built with make on UNIX and jom on Windows.
   executable make
-  workingDir project.openssl_build_dir
-
-  args "-j${project.processors}"
-}
-
-// Runs the install step.
-project.tasks.create("installOpenSSL", Exec) {
-  // Make sure that we have built.
-  dependsOn "buildOpenSSL"
-
-  // OpenSSL is installed with make on UNIX and nmake on Windows.
-  executable make
-  args "install_sw"
+  args "install_dev"
   workingDir project.openssl_build_dir
 
   args "-j${project.processors}"
@@ -98,7 +86,7 @@ project.tasks.create("installOpenSSL", Exec) {
 
 // Create a "mega-task" that builds everything.
 project.tasks.create("openSSL") {
-  dependsOn "installOpenSSL"
+  dependsOn "buildOpenSSL"
   outputs.dir(project.openssl_install)
 
   if (project.platform.contains("windows")) {
