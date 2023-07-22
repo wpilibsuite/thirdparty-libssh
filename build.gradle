@@ -2,6 +2,7 @@ import org.gradle.internal.os.OperatingSystem
 
 plugins {
   id "maven-publish"
+  id "de.undercouch.download" version "5.4.0"
 }
 
 // Project Version

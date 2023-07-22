@@ -6,6 +6,18 @@ task prepareOpenSSLDirectories {
     }
 }
 
+project.tasks.create("downloadJom", Download) {
+  src 'https://qt.mirror.constant.com/official_releases/jom/jom_1_1_3.zip'
+  dest buildDir
+  overwrite false
+}
+
+project.tasks.create("unzipJom", Copy) {
+  dependsOn downloadJom
+  from zipTree("$buildDir/jom_1_1_3.zip")
+  into "$buildDir/jom"
+}
+
 // Runs the configure step.
 project.tasks.create("configureOpenSSL", Exec) {
   // OpenSSL is configured with Perl. We want to build static libraries and specify
@@ -25,6 +37,7 @@ project.tasks.create("configureOpenSSL", Exec) {
       args "VC-WIN64A"
     }
     args "/FS"
+    dependsOn unzipJom
   } else if (project.platform == "osx-arm64") {
     args "darwin64-arm64-cc"
     environment "ARCHFLAGS", "-arch arm64"
@@ -56,11 +69,7 @@ project.tasks.create("configureOpenSSL", Exec) {
   dependsOn prepareOpenSSLDirectories
 }
 
-def make = project.platform.contains("windows") ? "nmake" : "make"
-
-if (project.hasProperty("useJom")) {
-  make = "jom"
-}
+def make = project.platform.contains("windows") ? "$buildDir/jom/jom.exe" : "make"
 
 // Runs the build step.
 project.tasks.create("buildOpenSSL", Exec) {
@@ -71,9 +80,7 @@ project.tasks.create("buildOpenSSL", Exec) {
   executable make
   workingDir project.openssl_build_dir
 
-  // UNIX supports building with multiple workers.
-  if (!project.platform.contains("windows") || project.hasProperty("useJom"))
-    args "-j${project.processors}"
+  args "-j${project.processors}"
 }
 
 // Runs the install step.
@@ -86,9 +93,7 @@ project.tasks.create("installOpenSSL", Exec) {
   args "install_sw"
   workingDir project.openssl_build_dir
 
-  // UNIX supports installing with multiple workers.
-  if (!project.platform.contains("windows") || project.hasProperty("useJom"))
-    args "-j${project.processors}"
+  args "-j${project.processors}"
 }
 
 // Create a "mega-task" that builds everything.
