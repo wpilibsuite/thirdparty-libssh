@@ -43,6 +43,8 @@ types.each { type ->
       args "-DOPENSSL_CRYPTO_LIBRARY=${project.openssl_install}/lib/libcrypto.a"
       args "-DOPENSSL_SSL_LIBRARY=${project.openssl_install}/lib/libssl.a"
       args "-DOPENSSL_INCLUDE_DIR=${project.openssl_install}/include"
+    } else if (project.platform.contains("windows")) {
+      args "-DOPENSSL_ROOT_DIR=${project.openssl_install}"
     }
 
     args "-DBUILD_SHARED_LIBS=OFF", "-DWITH_ZLIB=OFF", "-DWITH_EXAMPLES=OFF",
@@ -117,6 +119,13 @@ types.each { type ->
       // Add libraries to merge.
       args "$ssl_libs/libcrypto.lib"
       args "$ssh_libs/ssh.lib"
+
+      doLast {
+        copy {
+          from "$ssl_libs/ossl_static.pdb"
+          into "$ssh_libs"
+        }
+      }
     } else if (project.platform.contains("osx")) {
       // Use libtool to merge libraries.
       executable "libtool"
