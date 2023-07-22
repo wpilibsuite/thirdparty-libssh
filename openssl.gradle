@@ -12,7 +12,7 @@ project.tasks.create("configureOpenSSL", Exec) {
   // a custom installation location.
   executable "perl"
   def configureLocation = project.file("$project.openssl_dir/Configure")
-  args configureLocation, "no-shared", "--prefix=${project.openssl_install}", "--libdir=lib"
+  args configureLocation, "no-shared", "no-tests", "--prefix=${project.openssl_install}", "--libdir=lib"
   workingDir project.openssl_build_dir
 
   // Add the arch specifier for Windows.
@@ -24,6 +24,7 @@ project.tasks.create("configureOpenSSL", Exec) {
     } else {
       args "VC-WIN64A"
     }
+    args "/FS"
   } else if (project.platform == "osx-arm64") {
     args "darwin64-arm64-cc"
     environment "ARCHFLAGS", "-arch arm64"
@@ -57,6 +58,10 @@ project.tasks.create("configureOpenSSL", Exec) {
 
 def make = project.platform.contains("windows") ? "nmake" : "make"
 
+if (project.hasProperty("useJom")) {
+  make = "jom"
+}
+
 // Runs the build step.
 project.tasks.create("buildOpenSSL", Exec) {
   // Make sure that we are configured.
@@ -67,7 +72,7 @@ project.tasks.create("buildOpenSSL", Exec) {
   workingDir project.openssl_build_dir
 
   // UNIX supports building with multiple workers.
-  if (!project.platform.contains("windows"))
+  if (!project.platform.contains("windows") || project.hasProperty("useJom"))
     args "-j${project.processors}"
 }
 
@@ -82,7 +87,7 @@ project.tasks.create("installOpenSSL", Exec) {
   workingDir project.openssl_build_dir
 
   // UNIX supports installing with multiple workers.
-  if (!project.platform.contains("windows"))
+  if (!project.platform.contains("windows") || project.hasProperty("useJom"))
     args "-j${project.processors}"
 }
 
@@ -90,4 +95,16 @@ project.tasks.create("installOpenSSL", Exec) {
 project.tasks.create("openSSL") {
   dependsOn "installOpenSSL"
   outputs.dir(project.openssl_install)
+
+  if (project.platform.contains("windows")) {
+    doLast {
+      copy {
+        from "$project.openssl_install/lib/libcrypto.lib"
+        from "$project.openssl_install/lib/libssl.lib"
+        into "$project.openssl_install/lib"
+        rename("libcrypto.lib", "libcryptod.lib")
+        rename("libssl.lib", "libssld.lib")
+      }
+    }
+  }
 }
