@@ -119,6 +119,13 @@ types.each { type ->
       // Add libraries to merge.
       args "$ssl_libs/libcrypto.lib"
       args "$ssh_libs/ssh.lib"
+
+      doLast {
+        copy {
+          from "$ssl_libs/ossl_static.pdb"
+          into "$ssh_libs"
+        }
+      }
     } else if (project.platform.contains("osx")) {
       // Use libtool to merge libraries.
       executable "libtool"
