@@ -57,7 +57,7 @@ project.tasks.create("configureOpenSSL", Exec) {
       args "linux-armv4"
       args "-DL_ENDIAN"
       args "-latomic"
-      args "--cross-compile-prefix=arm-frc2023-linux-gnueabi-"
+      args "--cross-compile-prefix=arm-frc2024-linux-gnueabi-"
     } else if (project.platform == "linux-arm64") {
       args "linux-aarch64"
       if (project.hasProperty('forcecrossbuild')) {
