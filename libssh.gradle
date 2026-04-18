@@ -26,20 +26,8 @@ types.each { type ->
       environment "ARCHFLAGS", "-arch arm64 -arch x86_64"
     } else if (project.platform == "linux-arm64") {
       if (project.hasProperty('forcecrossbuild')) {
-        args "-DCMAKE_TOOLCHAIN_FILE=$rootDir/cmake/aarch64-bullseye-gnu.toolchain.cmake"
+        args "-DCMAKE_TOOLCHAIN_FILE=/usr/local/toolchain-config.cmake"
       }
-      args "-DOPENSSL_CRYPTO_LIBRARY=${project.openssl_install}/lib/libcrypto.a"
-      args "-DOPENSSL_SSL_LIBRARY=${project.openssl_install}/lib/libssl.a"
-      args "-DOPENSSL_INCLUDE_DIR=${project.openssl_install}/include"
-    } else if (project.platform == "linux-arm32") {
-      if (project.hasProperty('forcecrossbuild')) {
-       args "-DCMAKE_TOOLCHAIN_FILE=$rootDir/cmake/arm-pi-gnueabihf.toolchain.cmake"
-      }
-      args "-DOPENSSL_CRYPTO_LIBRARY=${project.openssl_install}/lib/libcrypto.a"
-      args "-DOPENSSL_SSL_LIBRARY=${project.openssl_install}/lib/libssl.a"
-      args "-DOPENSSL_INCLUDE_DIR=${project.openssl_install}/include"
-    } else if (project.platform == "linux-athena") {
-      args "-DCMAKE_TOOLCHAIN_FILE=$rootDir/cmake/arm-frc-gnueabi.toolchain.cmake"
       args "-DOPENSSL_CRYPTO_LIBRARY=${project.openssl_install}/lib/libcrypto.a"
       args "-DOPENSSL_SSL_LIBRARY=${project.openssl_install}/lib/libssl.a"
       args "-DOPENSSL_INCLUDE_DIR=${project.openssl_install}/include"
@@ -53,9 +41,7 @@ types.each { type ->
     environment "OPENSSL_ROOT_DIR": "${project.openssl_install}"
 
     def platformArg = "x64"
-    if (project.platform == "windows-x86") {
-      platformArg = "Win32"
-    } else if (project.platform == "windows-arm64") {
+    if (project.platform == "windows-arm64") {
       platformArg = "arm64"
     }
 
@@ -84,9 +70,7 @@ types.each { type ->
     workingDir build_dir
 
     def platformArg = "/p:Platform=x64"
-    if (project.platform == "windows-x86") {
-      platformArg = "/p:Platform=win32"
-    } else if (project.platform == "windows-arm64") {
+    if (project.platform == "windows-arm64") {
       platformArg = "/p:Platform=arm64"
     }
 
