@@ -12,6 +12,8 @@ jobs:
         with:
           submodules: true
 
+      - run: sudo apt update && sudo apt install ninja-build
+
       - name: Build
         run: ./gradlew build
 
@@ -28,6 +30,8 @@ jobs:
       - uses: actions/checkout@v6
         with:
           submodules: true
+
+      - run: sudo apt update && sudo apt install ninja-build
 
       - name: Build
         run: ./gradlew build -Pforcecrossbuild=linux-arm64
@@ -74,10 +78,10 @@ jobs:
           name: ${{ matrix.artifact-name }}
           path: build/allOutputs
 
-  build-macos:
+  build-macos-arm:
     env:
       MACOSX_DEPLOYMENT_TARGET: 11
-    name: "Build - macOS"
+    name: "Build - macOS (Arm)"
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v6
@@ -89,12 +93,55 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
+          name: macOSArm
+          path: build/allOutputs
+
+  build-macos:
+    env:
+      MACOSX_DEPLOYMENT_TARGET: 11
+    name: "Build - macOS"
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+
+      - name: Build
+        run: ./gradlew build -Pforcecrossbuild=osx-x86_64
+
+      - uses: actions/upload-artifact@v7
+        with:
           name: macOS
           path: build/allOutputs
 
+  make_universal:
+    name: Make Universal
+    needs: [build-macos, build-macos-arm]
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v8
+        with:
+          name: macOS
+          path: build/downloads
+      - uses: actions/download-artifact@v8
+        with:
+          name: macOSArm
+          path: build/downloads
+      - uses: actions/setup-java@v5
+        with:
+          java-version: 25
+          distribution: 'temurin'
+      - run: ./gradlew copyToUpload -Prunmerge
+        name: Build with Gradle
+      - uses: actions/upload-artifact@v7
+        with:
+          name: macOSUniversal
+          path: build/toUpload/
+
   combine:
     name: Combine
-    needs: [ build-linux, build-windows, build-macos, build-linux-arm64 ]
+    needs: [ build-linux, build-windows, build-macos, build-linux-arm64, make_universal ]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -104,7 +151,9 @@ jobs:
         with:
           path: combiner/products/build/allOutputs
       - name: Flatten Artifacts
-        run: rsync -a --delete combiner/products/build/allOutputs/*/* combiner/products/build/allOutputs/
+        run: |
+          rm -r combiner/products/build/allOutputs/macOS combiner/products/build/allOutputs/macOSArm
+          rsync -a --delete combiner/products/build/allOutputs/*/* combiner/products/build/allOutputs/
       - uses: actions/setup-java@v5
         with:
           java-version: 25

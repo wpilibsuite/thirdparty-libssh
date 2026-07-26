@@ -6,84 +6,57 @@ task prepareOpenSSLDirectories {
     }
 }
 
-project.tasks.create("downloadJom", Download) {
-  src 'https://qt.mirror.constant.com/official_releases/jom/jom_1_1_3.zip'
-  dest buildDir
-  overwrite false
-}
-
-project.tasks.create("unzipJom", Copy) {
-  dependsOn downloadJom
-  from zipTree("$buildDir/jom_1_1_3.zip")
-  into "$buildDir/jom"
-}
-
 // Runs the configure step.
-project.tasks.create("configureOpenSSL", Exec) {
-  // OpenSSL is configured with Perl. We want to build static libraries and specify
-  // a custom installation location.
-  executable "perl"
-  def configureLocation = project.file("$project.openssl_dir/Configure")
-  args configureLocation, "no-shared", "no-tests", "--prefix=${project.openssl_install}", "--libdir=lib"
-  workingDir project.openssl_build_dir
+def types = ["Debug", "Release"]
+types.each { type ->
+  // Create an alias to the build directory.
+  def build_dir = file("$openssl_build_dir/${type.toLowerCase()}")
+  project.tasks.create("configureOpenSSL$type", Exec) {
+    mkdir build_dir
 
-  // Add the arch specifier for Windows.
-  if (project.platform.contains("windows")) {
-    if (project.platform == "windows-arm64") {
-      args "VC-WIN64-ARM"
-    } else {
-      args "VC-WIN64A"
-    }
-    args "/FS"
-    dependsOn unzipJom
-  } else if (project.platform == "osx-arm64") {
-    args "darwin64-arm64-cc"
-    environment "ARCHFLAGS", "-arch arm64"
-  } else if (project.platform == "osx-x86_64") {
-    args "darwin64-x86_64-cc"
-    environment "ARCHFLAGS", "-arch x86_64"
-  } else {
-    args "--openssldir=/usr/local/ssl"
-    if (project.platform == "linux-arm64") {
-      args "linux-aarch64"
+    // OpenSSL is configured with CMake. We want to build static libraries. Also set
+    // the archive to be stored in build/lib instead of build/src (the default).
+    executable "cmake"
+    args "$openssl_dir", "-G", "Ninja", "-DCMAKE_BUILD_TYPE=$type", "-DBUILD_SHARED_LIBS=OFF"
+
+    if (project.platform == "osx-arm64") {
+      args "-DCMAKE_OSX_ARCHITECTURES=arm64", "-DCMAKE_OSX_DEPLOYMENT_TARGET=\"11.0\""
+      environment "ARCHFLAGS", "-arch arm64"
+    } else if (project.platform == "osx-x86_64") {
+      args "-DCMAKE_OSX_ARCHITECTURES=x86_64", "-DCMAKE_OSX_DEPLOYMENT_TARGET=\"11.0\""
+      environment "ARCHFLAGS", "-arch x86_64"
+    } else if (project.platform == "linux-arm64") {
       if (project.hasProperty('forcecrossbuild')) {
-        args "--cross-compile-prefix=aarch64-bookworm-linux-gnu-"
+        args "-DCMAKE_TOOLCHAIN_FILE=/usr/local/toolchain-config.cmake"
       }
+    } else if (project.platform == "windows-arm64") {
+      args "-DOPENSSL_NO_ASM=ON"
     }
+    args "-DDISABLE_GO=ON", "-DDISABLE_PERL=ON", "-DBUILD_TOOL=OFF", "-DBUILD_LIBSSL=OFF",
+         "-DBUILD_TESTING=OFF","-DCMAKE_ARCHIVE_OUTPUT_DIRECTORY=${build_dir}/lib"
+    workingDir build_dir
   }
+  // Runs the build step.
+  project.tasks.create("buildOpenSSL$type", Exec) {
+    // Make sure that we are configured.
+    dependsOn "configureOpenSSL$type"
 
-  dependsOn prepareOpenSSLDirectories
-}
-
-def make = project.platform.contains("windows") ? "$buildDir/jom/jom.exe" : "make"
-
-// Runs the build step.
-project.tasks.create("buildOpenSSL", Exec) {
-  // Make sure that we are configured.
-  dependsOn "configureOpenSSL"
-
-  // OpenSSL is built with make on UNIX and jom on Windows.
-  executable make
-  args "install_dev"
-  workingDir project.openssl_build_dir
-
-  args "-j${project.processors}"
+    // Use CMake to invoke the low-level build system.
+    executable "cmake"
+    args "--build", ".", "--parallel", "${project.processors}"
+    workingDir build_dir
+  }
+  project.tasks.create("installOpenSSL$type", Exec) {
+    dependsOn "buildOpenSSL$type"
+    executable "cmake"
+    args "--install", "$build_dir", "--prefix", "$project.openssl_install/${type.toLowerCase()}"
+  }
 }
 
 // Create a "mega-task" that builds everything.
 project.tasks.create("openSSL") {
-  dependsOn "buildOpenSSL"
-  outputs.dir(project.openssl_install)
-
-  if (project.platform.contains("windows")) {
-    doLast {
-      copy {
-        from "$project.openssl_install/lib/libcrypto.lib"
-        from "$project.openssl_install/lib/libssl.lib"
-        into "$project.openssl_install/lib"
-        rename("libcrypto.lib", "libcryptod.lib")
-        rename("libssl.lib", "libssld.lib")
-      }
-    }
+  types.each { type ->
+    dependsOn "installOpenSSL$type"
+    outputs.dir("$project.openssl_install/${type.toLowerCase()}")
   }
 }

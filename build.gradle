@@ -6,7 +6,7 @@ plugins {
 }
 
 // Project Version
-ext.pub_version = "2027-0.120-1"
+ext.pub_version = "2027-1.11.1-1"
 
 static def get_platform() {
   def platform
@@ -24,7 +24,7 @@ static def get_platform() {
   } else if (OperatingSystem.current().isLinux()) {
     platform = "linux-${os_arch}"
   } else if (OperatingSystem.current().isMacOsX()) {
-    platform = "osx-universal"
+    platform = "osx-${os_arch}"
   } else {
     platform = "${os_name}-${os_arch}"
   }
@@ -37,8 +37,10 @@ static def get_platform_path(platform) {
     return "linux/arm64"
   } else if (platform == "linux-x86_64") {
     return "linux/x86-64"
-  } else if (platform == "osx-universal") {
-    return "osx/universal"
+  } else if (platform == "osx-x86_64") {
+    return "osx/x86-64"
+  } else if (platform == "osx-arm64") {
+    return "osx/arm64"
   } else if (platform == "windows-x86_64") {
     return "windows/x86-64"
   } else if (platform == "windows-arm64") {
@@ -58,18 +60,12 @@ ext.platform_classifier = ext.platform.replaceFirst('-', '').replace('_', '-')
 // Get the number of processors available to build.
 ext.processors = Runtime.runtime.availableProcessors()
 
-ext.openssl_dir = file("openssl")
+ext.openssl_dir = file("aws-lc")
 ext.openssl_build_dir = file("build/$platform_path/openssl")
 ext.openssl_install = file("build/$platform_path/install-openssl")
 
-ext.openssl_arm_build_dir = file("build/arm/openssl")
-ext.openssl_arm_install = file("build/arm/install-openssl")
-
-ext.openssl_intel_build_dir = file("build/intel/openssl")
-ext.openssl_intel_install = file("build/intel/install-openssl")
-
-ext.libssh_dir = file("libssh-mirror")
-ext.libssh_build = file("build/$platform_path/libssh")
+ext.libssh_dir = file("libssh2")
+ext.libssh_build = file("build/$platform_path/libssh2")
 
 task clean {
   doLast {
@@ -79,12 +75,10 @@ task clean {
     }
   }
 }
-
-if (project.platform == "osx-universal") {
-  apply from: "opensslosx.gradle"
-} else {
-  apply from: "openssl.gradle"
+if (project.hasProperty("runmerge")) {
+  apply from: "merge.gradle"
 }
+apply from: "openssl.gradle"
 apply from: "libssh.gradle"
 
 // Outputs for publishing
