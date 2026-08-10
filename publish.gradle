@@ -1,7 +1,7 @@
 // Define directories and files used for outputs.
 def outputs_dir = file("$buildDir/outputs")
-def libssh_license_file = file("libssh-mirror/COPYING")
-def openssl_license_file = file("openssl/LICENSE.txt")
+def libssh_license_file = file("libssh2/COPYING")
+def openssl_license_file = file("aws-lc/LICENSE")
 
 // Define names for publishing.
 def base_artifact_id = "libssh"
@@ -41,11 +41,11 @@ task cppHeadersZip(type: Zip) {
   // Copy license files.
   from(libssh_license_file) {
     into "/"
-    rename { _ -> "LIBSSH-LICENSE" }
+    rename { _ -> "LIBSSH2-LICENSE" }
   }
   from(openssl_license_file) {
     into "/"
-    rename { _ -> "OPENSSL_LICENSE" }
+    rename { _ -> "AWS-LC-LICENSE" }
   }
 
   // Copy headers.
@@ -77,11 +77,11 @@ task cppSourcesZip(type: Zip) {
   // Copy license files.
   from(libssh_license_file) {
     into "/"
-    rename { _ -> "LIBSSH-LICENSE" }
+    rename { _ -> "LIBSSH2-LICENSE" }
   }
   from(openssl_license_file) {
     into "/"
-    rename { _ -> "OPENSSL_LICENSE" }
+    rename { _ -> "AWS-LC-LICENSE" }
   }
 
   // Copy headers.
@@ -109,11 +109,11 @@ types.each { type ->
     // Copy license files.
     from(libssh_license_file) {
       into "/"
-      rename { _ -> "LIBSSH-LICENSE" }
+      rename { _ -> "LIBSSH2-LICENSE" }
     }
     from(openssl_license_file) {
       into "/"
-      rename { _ -> "OPENSSL_LICENSE" }
+      rename { _ -> "AWS-LC-LICENSE" }
     }
 
     // Copy libraries.
@@ -121,12 +121,8 @@ types.each { type ->
 
     if (project.platform.contains("windows")) {
       // On Windows, the staging dir is one layer deeper.
-      lib_dir = file("$lib_dir/$type")
+      lib_dir = file("$lib_dir")
       from("$lib_dir/ssh${project.pub_version}.lib") { into "${project.platform_path}/static" }
-      from("$lib_dir") {
-        into "${project.platform_path}/static"
-        include "*.pdb"
-      }
     } else {
       from("$lib_dir/libssh${project.pub_version}.a") { into "${project.platform_path}/static" }
     }

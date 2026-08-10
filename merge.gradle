@@ -1,0 +1,137 @@
+import java.security.MessageDigest
+
+def downloadsFolder = project.file("build/downloads")
+def toUpload = project.file("build/toUpload")
+def extractFolder = project.file('build/extract')
+def archivesFolder = project.file('build/archive')
+
+def files = project.files(downloadsFolder)
+
+def constantNames = [
+    'version.txt',
+    'libssh_CLS-headers.zip',
+    'libssh_CLS-sources.zip',
+]
+
+def constantFiles = []
+def mergeFiles = []
+
+downloadsFolder.eachFile {
+    def found = false
+    for (element in constantNames) {
+      if (it.name.endsWith(element)) {
+        constantFiles << it
+        found = true
+        break
+      }
+    }
+    if (!found) {
+        mergeFiles << it
+    }
+}
+
+def mergePairs = [:]
+
+// Match all to extract
+mergeFiles.removeAll {
+    it.name.contains('osxarm64')
+}
+
+mergeFiles.each {
+    mergePairs.put(it.name, it.name.replace('osxx86-64', 'osxarm64'))
+}
+
+def mergeTasks = []
+
+mergePairs.each {
+
+    def intelArchive = it.key
+    def armArchive = it.value
+
+    def extractIntelTask = project.tasks.create("extract_$intelArchive", Copy) {
+        def withoutExt = intelArchive.substring(0, intelArchive.length() - 4);
+        def folder = "$extractFolder/$withoutExt"
+        def f = "$downloadsFolder/$intelArchive"
+        inputs.file f
+
+        from zipTree(f)
+        into folder
+    }
+
+    def extractArmTask = project.tasks.create("extract_$armArchive", Copy) {
+        def withoutExt = armArchive.substring(0, armArchive.length() - 4);
+        def folder = "$extractFolder/$withoutExt"
+        def f = "$downloadsFolder/$armArchive"
+        inputs.file f
+
+        from zipTree(f)
+        into folder
+    }
+
+    def copyAndMerge = project.tasks.create("merge_$intelArchive", Copy) {
+        def withoutExt = intelArchive.substring(0, intelArchive.length() - 4);
+        def replaced = withoutExt.replace('osxx86-64', 'osxuniversal')
+        def replacedFolder = "$extractFolder/$replaced"
+
+        dependsOn extractIntelTask
+        dependsOn extractArmTask
+
+        from (extractIntelTask) {
+            exclude '**/*.dylib'
+            exclude '**/*.a'
+            exclude '**/*.hash'
+            includeEmptyDirs = false
+        }
+        into replacedFolder
+
+        doLast {
+            extractIntelTask.destinationDir.eachFileRecurse {
+                if (it.name.endsWith('.a')) {
+                    def intelFile = it.toString()
+                    def armFile = it.toString().replace('x86-64', 'arm64')
+                    def universalFile = it.toString().replace('x86-64', 'universal')
+                    project.file(universalFile).parentFile.mkdirs()
+                    providers.exec {
+                        executable 'lipo'
+                        args = [
+                            '-create',
+                            intelFile,
+                            armFile,
+                            '-output',
+                            universalFile
+                        ]
+                    }.result.get()
+                }
+            }
+        }
+    }
+
+    def archive = project.tasks.create("archive_$intelArchive", Zip) {
+        dependsOn copyAndMerge
+
+        def withoutExt = intelArchive.substring(0, intelArchive.length() - 4);
+        def replaced = withoutExt.replace('osxx86-64', 'osxuniversal')
+
+        archiveBaseName = replaced
+
+        destinationDirectory = archivesFolder
+
+        from copyAndMerge
+    }
+
+    mergeTasks << archive
+}
+
+project.tasks.register('copyToUpload', Copy) {
+
+    mergeTasks.each {
+        dependsOn it
+        from it
+    }
+
+    constantFiles.each {
+        from it
+    }
+
+    into toUpload
+}
